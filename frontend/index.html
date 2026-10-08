@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SoundFlow</title>
+    <link rel="icon" type="image/png" href="assets/icon.png">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/player.css">
+    <script async crossorigin="anonymous"
+        data-clerk-publishable-key="pk_test_ZXhhY3QtcXVldHphbC03ODE2LmNsZXJrLmFjY291bnRzLmRldiQ"
+        src="https://exact-quetzal-7816.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
+        type="text/javascript"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- MINIMALIST SIDEBAR -->
+        <aside class="sidebar">
+            <div class="brand">
+                <img src="assets/icon.png" alt="SoundFlow Logo" class="brand-logo">
+                <div class="brand-text">
+                    <span class="brand-name">SoundFlow</span>
+                    <span class="brand-tag">Ultra-Light</span>
+                </div>
+            </div>
+
+            <nav class="nav-menu">
+                <button class="nav-item active" data-view="home">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                        <polyline points="9 22 9 12 15 12 15 22"/>
+                    </svg>
+                    <span>Головна</span>
+                </button>
+                <button class="nav-item" data-view="search">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"/>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    <span>Пошук</span>
+                </button>
+                <button class="nav-item" data-view="liked">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+                    </svg>
+                    <span>Улюблені</span>
+                    <span class="count-badge" id="liked-count">0</span>
+                </button>
+                <button class="nav-item" data-view="history">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"/>
+                        <polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                    <span>Історія</span>
+                </button>
+                <button class="nav-item" data-view="profile" id="nav-item-profile">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                    <span>Профіль</span>
+                    <span class="role-badge-pill admin" id="nav-role-badge">ADMIN</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-divider"></div>
+
+            <div class="playlists-section">
+                <div class="playlists-header">
+                    <span>ПЛЕЙЛИСТИ</span>
+                    <button id="btn-create-playlist-modal" title="Створити плейлист">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                    </button>
+                </div>
+                <div class="playlists-list" id="playlists-list">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <!-- Minimalist resource indicator -->
+            <div class="resource-badge">
+                <span class="res-indicator"></span>
+                <span class="res-text" id="stats-text">⚡ 48 MB • 0.1% CPU</span>
+            </div>
+        </aside>
+
+        <!-- MAIN VIEW AREA -->
+        <main class="main-content">
+            <!-- TOP BAR -->
+            <header class="topbar">
+                <div class="topbar-main-row">
+                    <div class="search-box-wrapper">
+                        <div class="search-input-group">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" class="search-icon">
+                                <circle cx="11" cy="11" r="8"/>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                            </svg>
+                            <input type="text" id="search-input" placeholder="Пошук музики, виконавців або міксів..." autocomplete="off">
+                            <button id="search-clear-btn" class="clear-btn" style="display: none;">&times;</button>
+                        </div>
+
+                        <div class="source-filters">
+                            <button class="source-chip active" data-source="all">Всі</button>
+                            <button class="source-chip" data-source="soundcloud">
+                                <span class="sc-dot"></span>
+                                SoundCloud
+                            </button>
+                            <button class="source-chip" data-source="youtube">
+                                <span class="yt-dot"></span>
+                                YouTube
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- CLERK AUTHENTICATION WIDGET -->
+                    <div id="auth-container" class="auth-container"></div>
+                </div>
+
+                <!-- Genre pills -->
+                <div class="genre-chips-container">
+                    <button class="genre-chip active" data-genre="lofi">☕ Lo-Fi Chill</button>
+                    <button class="genre-chip" data-genre="synthwave">🌆 Synthwave</button>
+                    <button class="genre-chip" data-genre="phonk">🏎️ Phonk Drift</button>
+                    <button class="genre-chip" data-genre="deephouse">🎧 Deep House</button>
+                    <button class="genre-chip" data-genre="rock">🎸 Rock</button>
+                    <button class="genre-chip" data-genre="gaming">🎮 Gaming Mix</button>
+                    <button class="genre-chip" data-genre="ambient">🌿 Ambient</button>
+                    <button class="genre-chip" data-genre="ua">🇺🇦 Українське</button>
+                </div>
+            </header>
+
+            <!-- VIEWS CONTAINER -->
+            <div class="content-scroll">
+                <!-- HOME VIEW -->
+                <section id="home-view" class="view-panel active">
+                    <div class="hero-banner">
+                        <div class="hero-glow"></div>
+                        <div class="hero-content">
+                            <span class="hero-badge">НОВИЙ РІВЕНЬ ЗВУКУ</span>
+                            <h1>Музика без меж</h1>
+                            <p>Миттєвий онлайн-стрімінг треків із SoundCloud та YouTube. Жодних гальм, нуль зайвого навантаження.</p>
+                            <div class="hero-actions">
+                                <button class="btn-hero-play" id="btn-hero-mix">
+                                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                                        <path d="M8 5v14l11-7z"/>
+                                    </svg>
+                                    <span>Увімкнути мікс</span>
+                                </button>
+                                <button class="btn-hero-secondary" id="btn-hero-search">Знайти трек</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section-block">
+                        <div class="section-header">
+                            <h2 id="home-category-title">Популярні треки (Lo-Fi Chill)</h2>
+                            <span class="refresh-indicator" id="category-loading" style="display: none;">Завантаження...</span>
+                        </div>
+                        <div class="tracks-grid" id="home-tracks-grid">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SEARCH VIEW -->
+                <section id="search-view" class="view-panel">
+                    <div class="section-header">
+                        <h2>Результати: <span id="search-query-display"></span></h2>
+                        <span id="search-count" class="text-muted"></span>
+                    </div>
+                    <div id="search-loading" class="loading-spinner-container" style="display: none;">
+                        <div class="spinner"></div>
+                        <p>Шукаємо треки у SoundCloud та YouTube...</p>
+                    </div>
+                    <div class="tracks-grid" id="search-tracks-grid">
+                        <!-- Populated dynamically -->
+                    </div>
+                    <div id="search-empty" class="empty-state" style="display: none;">
+                        <svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <circle cx="11" cy="11" r="8"/>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                        </svg>
+                        <h3>Нічого не знайдено</h3>
+                        <p>Спробуйте іншу назву пісні або виконавця.</p>
+                    </div>
+                </section>
+
+                <!-- LIKED VIEW -->
+                <section id="liked-view" class="view-panel">
+                    <div class="playlist-hero liked-hero">
+                        <div class="hero-art-icon heart-art">
+                            <svg viewBox="0 0 24 24" width="48" height="48" fill="currentColor">
+                                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                            </svg>
+                        </div>
+                        <div class="playlist-meta">
+                            <span class="meta-label">КОЛЕКЦІЯ</span>
+                            <h1>Улюблені треки</h1>
+                            <p id="liked-meta-info">0 треків</p>
+                            <div class="playlist-actions-row">
+                                <button class="btn-play-playlist" id="btn-play-liked">
+                                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                                        <path d="M8 5v14l11-7z"/>
+                                    </svg>
+                                    <span>Слухати все</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tracks-list-container" id="liked-tracks-list">
+                        <!-- Populated dynamically -->
+                    </div>
+                </section>
+
+                <!-- PLAYLIST VIEW -->
+                <section id="playlist-view" class="view-panel">
+                    <div class="playlist-hero">
+                        <div class="hero-art-icon playlist-art">
+                            <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 18V5l12-2v13"></path>
+                                <circle cx="6" cy="18" r="3"></circle>
+                                <circle cx="18" cy="16" r="3"></circle>
+                            </svg>
+                        </div>
+                        <div class="playlist-meta">
+                            <span class="meta-label">ПЛЕЙЛИСТ</span>
+                            <h1 id="current-pl-name">Назва плейлиста</h1>
+                            <p id="current-pl-info">0 треків</p>
+                            <div class="playlist-actions-row">
+                                <button class="btn-play-playlist" id="btn-play-current-pl">
+                                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                                        <path d="M8 5v14l11-7z"/>
+                                    </svg>
+                                    <span>Слухати все</span>
+                                </button>
+                                <button class="btn-delete-pl" id="btn-delete-current-pl" title="Видалити плейлист">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"></polyline>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                    </svg>
+                                    <span>Видалити</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tracks-list-container" id="current-pl-tracks">
+                        <!-- Populated dynamically -->
+                    </div>
+                </section>
+
+                <!-- HISTORY VIEW -->
+                <section id="history-view" class="view-panel">
+                    <div class="section-header">
+                        <h2>Нещодавно прослухані</h2>
+                        <button class="btn-text-danger" id="btn-clear-history">Очистити історію</button>
+                    </div>
+                    <div class="tracks-list-container" id="history-tracks-list">
+                        <!-- Populated dynamically -->
+                    </div>
+                </section>
+
+                <!-- SOUNDCLOUD STYLE PROFILE VIEW -->
+                <section id="profile-view" class="view-panel">
+                    <!-- SoundCloud Banner & Header -->
+                    <div class="sc-profile-header preset-beige" id="sc-profile-banner">
+                        <div class="sc-profile-banner-overlay"></div>
+                        <div class="sc-profile-banner-actions">
+                            <button class="sc-btn-banner" id="btn-upload-banner" title="Завантажити або змінити обкладинку">
+                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                                <span>Upload header image</span>
+                            </button>
+                            <button class="sc-btn-banner" id="btn-banner-presets" title="Вибрати тему фону">
+                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                                <span>Update banner links</span>
+                            </button>
+                        </div>
+
+                        <div class="sc-profile-user-card">
+                            <div class="sc-avatar-wrapper">
+                                <img id="sc-profile-avatar" src="assets/icon.png" alt="Avatar" class="sc-avatar-img">
+                                <button class="sc-avatar-edit-btn" id="btn-edit-avatar" title="Змінити фото профілю">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                                </button>
+                            </div>
+                            <div class="sc-user-meta">
+                                <div class="sc-user-name-row">
+                                    <div class="sc-nickname-badge">
+                                        <span id="sc-profile-name">FEODAL</span>
+                                    </div>
+
+                                    <!-- ROLE BADGE (where the yellow oval is marked) -->
+                                    <div class="sc-role-badge-container">
+                                        <div class="sc-role-badge role-admin" id="sc-current-role-badge" title="Натисніть для вибору ролі">
+                                            <span class="role-icon" id="sc-role-icon">👑</span>
+                                            <span class="role-title" id="sc-role-title">АДМІНІСТРАТОР</span>
+                                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" class="role-dropdown-arrow"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                        </div>
+                                        
+                                        <!-- Role Selector Dropdown -->
+                                        <div class="sc-role-dropdown" id="sc-role-dropdown" style="display: none;">
+                                            <div class="role-dropdown-title">Оберіть роль користувача:</div>
+                                            <button class="role-option-btn role-listener" data-role="listener">
+                                                <span class="opt-icon">🎧</span>
+                                                <div class="opt-meta">
+                                                    <span class="opt-name">Слухач</span>
+                                                    <span class="opt-desc">Базовий плеєр, пошук та плейлисти</span>
+                                                </div>
+                                            </button>
+                                            <button class="role-option-btn role-artist" data-role="artist">
+                                                <span class="opt-icon">🎙️</span>
+                                                <div class="opt-meta">
+                                                    <span class="opt-name">Виконавець</span>
+                                                    <span class="opt-desc">Спеціальний статус та авторські мікси</span>
+                                                </div>
+                                            </button>
+                                            <button class="role-option-btn role-moderator" data-role="moderator">
+                                                <span class="opt-icon">🛡️</span>
+                                                <div class="opt-meta">
+                                                    <span class="opt-name">Модератор</span>
+                                                    <span class="opt-desc">Очищення кешу та модерація треків</span>
+                                                </div>
+                                            </button>
+                                            <button class="role-option-btn role-admin active" data-role="admin">
+                                                <span class="opt-icon">👑</span>
+                                                <div class="opt-meta">
+                                                    <span class="opt-name">Адміністратор</span>
+                                                    <span class="opt-desc">Всі переваги: Lossless HQ, DSP Bass Boost</span>
+                                                </div>
+                                                <span class="opt-active-check">✓</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Navigation Tabs under banner -->
+                    <div class="sc-tabs-bar">
+                        <div class="sc-tabs-nav">
+                            <button class="sc-tab-btn active" data-tab="all">Всі</button>
+                            <button class="sc-tab-btn" data-tab="popular">Популярні треки</button>
+                            <button class="sc-tab-btn" data-tab="tracks">Улюблені</button>
+                            <button class="sc-tab-btn" data-tab="playlists">Плейлисти</button>
+                            <button class="sc-tab-btn" data-tab="history">Історія</button>
+                            <button class="sc-tab-btn sc-admin-tab" data-tab="admin" id="sc-tab-admin">
+                                <span class="admin-tab-icon">👑</span>
+                                <span>Панель адміністратора</span>
+                                <span class="admin-pulse-dot"></span>
+                            </button>
+                        </div>
+                        <div class="sc-tabs-actions">
+                            <button class="sc-action-btn" id="btn-profile-share">
+                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+                                <span>Share</span>
+                            </button>
+                            <button class="sc-action-btn" id="btn-profile-edit">
+                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                                <span>Edit</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- SoundCloud Two-Column Layout -->
+                    <div class="sc-profile-grid">
+                        <!-- Main Content Column -->
+                        <div class="sc-main-col">
+                            <!-- TAB CONTENT: TRACKS / ALL -->
+                            <div id="sc-tab-content-tracks" class="sc-tab-panel active">
+                                <div class="sc-recent-header">
+                                    <h3>Recent</h3>
+                                </div>
+                                
+                                <!-- SoundCloud Waveform Hero Card -->
+                                <div class="sc-hero-player-card" id="sc-featured-track-card">
+                                    <div class="sc-hero-cover-wrap">
+                                        <img id="sc-hero-cover" class="sc-hero-cover-img" src="assets/icon.png" alt="Cover">
+                                        <button class="sc-hero-play-btn" id="sc-hero-play-toggle">
+                                            <svg id="sc-hero-play-icon" viewBox="0 0 24 24" width="28" height="28" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                                            <svg id="sc-hero-pause-icon" viewBox="0 0 24 24" width="28" height="28" fill="currentColor" style="display: none;"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                                        </button>
+                                    </div>
+                                    <div class="sc-hero-details">
+                                        <div class="sc-hero-top-row">
+                                            <div class="sc-hero-info">
+                                                <span class="sc-hero-artist" id="sc-hero-artist">SoundFlow Mix</span>
+                                                <span class="sc-hero-title" id="sc-hero-title">Виберіть трек для прослуховування</span>
+                                            </div>
+                                            <span class="sc-hero-time" id="sc-hero-time">now</span>
+                                        </div>
+                                        <div class="sc-hero-waveform" id="sc-waveform-bars">
+                                            <!-- Dynamically generated wave bars -->
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Tracks List -->
+                                <div class="tracks-list-container" id="sc-profile-tracks-list">
+                                    <!-- Populated dynamically -->
+                                </div>
+                            </div>
+
+                            <!-- TAB CONTENT: ADMIN PANEL (SUPERPOWERS) -->
+                            <div id="sc-tab-content-admin" class="sc-tab-panel" style="display: none;">
+                                <div class="admin-panel-hero">
+                                    <div class="admin-glow-bg"></div>
+                                    <div class="admin-badge-row">
+                                        <span class="admin-tag-pill">👑 PRIVILEGES LEVEL: OWNER / ADMIN</span>
+                                        <span class="admin-status-live">● SYSTEM ACTIVE</span>
+                                    </div>
+                                    <h2>Панель привілеїв адміністратора</h2>
+                                    <p>Ексклюзивні функції SoundFlow Ultra-Light: підвищена якість звуку, студійні ефекти та повне керування додатком.</p>
+                                </div>
+
+                                <div class="admin-perks-grid">
+                                    <!-- Perk 1: HQ Audio Stream (320 kbps) -->
+                                    <div class="admin-perk-card">
+                                        <div class="perk-icon-box gold">⚡</div>
+                                        <div class="perk-info">
+                                            <div class="perk-header-row">
+                                                <h4>Studio HQ Audio (320 kbps)</h4>
+                                                <label class="switch">
+                                                    <input type="checkbox" id="admin-hq-toggle" checked>
+                                                    <span class="slider round"></span>
+                                                </label>
+                                            </div>
+                                            <p>Максимальний аудіо-бітрейт та розширений буфер попереднього завантаження треків.</p>
+                                            <span class="perk-badge active" id="admin-hq-badge">АКТИВОВАНО (320 KBPS)</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Perk 2: Bass Boost & Audio Enhancer -->
+                                    <div class="admin-perk-card">
+                                        <div class="perk-icon-box purple">🎚️</div>
+                                        <div class="perk-info">
+                                            <div class="perk-header-row">
+                                                <h4>Studio Bass Booster FX</h4>
+                                                <label class="switch">
+                                                    <input type="checkbox" id="admin-bass-toggle" checked>
+                                                    <span class="slider round"></span>
+                                                </label>
+                                            </div>
+                                            <p>Апаратне підсилення суб-басу та низьких частот через WebAudio DSP без спотворень.</p>
+                                            <div class="bass-slider-row">
+                                                <span>Рівень басу:</span>
+                                                <input type="range" id="admin-bass-slider" min="0" max="14" step="1" value="6">
+                                                <span id="admin-bass-val">+6 dB</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Perk 3: Role Switcher & Override -->
+                                    <div class="admin-perk-card">
+                                        <div class="perk-icon-box cyan">👑</div>
+                                        <div class="perk-info">
+                                            <h4>Керування ролями профілю</h4>
+                                            <p>Миттєво змініть вашу поточну роль, яка відображається у профілі та навігації:</p>
+                                            <div class="role-pills-selector">
+                                                <button class="role-pill-btn" data-role-select="listener">🎧 Слухач</button>
+                                                <button class="role-pill-btn" data-role-select="artist">🎙️ Виконавець</button>
+                                                <button class="role-pill-btn" data-role-select="moderator">🛡️ Модератор</button>
+                                                <button class="role-pill-btn active" data-role-select="admin">👑 Адміністратор</button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Perk 4: Banner & UI Customization -->
+                                    <div class="admin-perk-card">
+                                        <div class="perk-icon-box orange">🎨</div>
+                                        <div class="perk-info">
+                                            <h4>Тема та стиль обкладинки</h4>
+                                            <p>Виберіть пресет для вашого банера у стилі SoundCloud:</p>
+                                            <div class="banner-presets-row">
+                                                <button class="preset-chip active" data-preset="beige">Beige (SoundCloud)</button>
+                                                <button class="preset-chip" data-preset="neon">Neon Sunset</button>
+                                                <button class="preset-chip" data-preset="cyber">Cyberpunk Violet</button>
+                                                <button class="preset-chip" data-preset="abyss">Midnight Abyss</button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Perk 5: Cache & DB Optimization -->
+                                    <div class="admin-perk-card">
+                                        <div class="perk-icon-box green">🧹</div>
+                                        <div class="perk-info">
+                                            <h4>Очищення кешу & Оптимізація</h4>
+                                            <p>Миттєво звільніть оперативну пам'ять, очистіть кеш потоків та оптимізуйте базу.</p>
+                                            <button class="btn-primary-sm" id="btn-admin-clean-cache">
+                                                <span>Очистити кеш SoundFlow</span>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Perk 6: Backup & Export Library -->
+                                    <div class="admin-perk-card">
+                                        <div class="perk-icon-box blue">💾</div>
+                                        <div class="perk-info">
+                                            <h4>Резервне копіювання бібліотеки</h4>
+                                            <p>Експорт та імпорт ваших плейлистів та улюблених пісень у форматі JSON.</p>
+                                            <div class="admin-btn-row">
+                                                <button class="btn-secondary-sm" id="btn-export-library">Експорт у JSON</button>
+                                                <button class="btn-secondary-sm" id="btn-import-library">Імпорт з JSON</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right SoundCloud Sidebar -->
+                        <aside class="sc-side-col">
+                            <!-- Stats Counters -->
+                            <div class="sc-stats-row">
+                                <div class="sc-stat-item">
+                                    <span class="sc-stat-label">Followers</span>
+                                    <span class="sc-stat-val" id="sc-stat-followers">1,420</span>
+                                </div>
+                                <div class="sc-stat-item">
+                                    <span class="sc-stat-label">Following</span>
+                                    <span class="sc-stat-val" id="sc-stat-following">2</span>
+                                </div>
+                                <div class="sc-stat-item">
+                                    <span class="sc-stat-label">Tracks</span>
+                                    <span class="sc-stat-val" id="sc-stat-tracks">0</span>
+                                </div>
+                            </div>
+
+                            <!-- Likes Sidebar Widget -->
+                            <div class="sc-side-widget">
+                                <div class="sc-widget-header">
+                                    <div class="sc-widget-title-row">
+                                        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                                        <span id="sc-likes-count-header">0 LIKES</span>
+                                    </div>
+                                    <button class="sc-widget-link" id="btn-view-all-likes">View all</button>
+                                </div>
+                                <div class="sc-mini-tracks-list" id="sc-mini-likes-list">
+                                    <!-- Populated dynamically -->
+                                </div>
+                            </div>
+
+                            <!-- Following Sidebar Widget (SoundCloud style) -->
+                            <div class="sc-side-widget">
+                                <div class="sc-widget-header">
+                                    <div class="sc-widget-title-row">
+                                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                                        <span>2 FOLLOWING</span>
+                                    </div>
+                                    <button class="sc-widget-link">View all</button>
+                                </div>
+                                <div class="sc-following-list">
+                                    <div class="sc-following-item">
+                                        <img src="assets/icon.png" class="sc-user-mini-avatar" alt="Avatar">
+                                        <div class="sc-following-meta">
+                                            <span class="sc-follow-name">sb161</span>
+                                            <span class="sc-follow-sub">👤 1,240 • 🎵 5</span>
+                                        </div>
+                                        <button class="sc-btn-following">Following</button>
+                                    </div>
+                                    <div class="sc-following-item">
+                                        <img src="assets/icon.png" class="sc-user-mini-avatar" alt="Avatar">
+                                        <div class="sc-following-meta">
+                                            <span class="sc-follow-name">Rura</span>
+                                            <span class="sc-follow-sub">👤 2</span>
+                                        </div>
+                                        <button class="sc-btn-following">Following</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </aside>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <!-- RIGHT QUEUE PANEL (Drawer) -->
+        <aside class="queue-panel" id="queue-panel">
+            <div class="queue-header">
+                <h3>Черга відтворення</h3>
+                <button id="btn-close-queue">&times;</button>
+            </div>
+            <div class="queue-content" id="queue-content">
+                <div class="queue-section">
+                    <span class="queue-sub">Зараз грає:</span>
+                    <div id="queue-now-playing"></div>
+                </div>
+                <div class="queue-section">
+                    <span class="queue-sub">Далі в черзі:</span>
+                    <div id="queue-next-tracks"></div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- PERSISTENT SLEEK PLAYER BAR -->
+        <footer class="player-bar">
+            <!-- Left: Current Track Info -->
+            <div class="player-track-info">
+                <img id="player-thumb" src="" alt="Обкладинка" class="player-thumb" style="display: none;">
+                <div class="player-thumb-placeholder" id="player-thumb-ph">
+                    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                </div>
+                <div class="player-title-col">
+                    <div class="track-title-wrapper">
+                        <span id="player-title" class="player-title">Виберіть трек для відтворення</span>
+                    </div>
+                    <div class="player-artist-row">
+                        <span id="player-artist" class="player-artist">SoundFlow</span>
+                        <span id="player-source-badge" class="source-tag" style="display: none;">SC</span>
+                    </div>
+                </div>
+                <button id="player-like-btn" class="icon-btn like-btn" title="В улюблені" style="display: none;">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Center: Controls, Visualizer & Seekbar -->
+            <div class="player-center">
+                <div class="player-controls">
+                    <button id="btn-shuffle" class="icon-btn" title="Випадковий порядок">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="16 3 21 3 21 8"></polyline>
+                            <line x1="4" y1="20" x2="21" y2="3"></line>
+                            <polyline points="21 16 21 21 16 21"></polyline>
+                            <line x1="15" y1="15" x2="21" y2="21"></line>
+                            <line x1="4" y1="4" x2="9" y2="9"></line>
+                        </svg>
+                    </button>
+                    <button id="btn-prev" class="icon-btn" title="Попередній трек">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                            <polygon points="19 20 9 12 19 4 19 20"></polygon>
+                            <line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" stroke-width="3"></line>
+                        </svg>
+                    </button>
+                    <button id="btn-play-pause" class="btn-play-pause" title="Грати / Пауза">
+                        <svg id="play-icon" viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                            <path d="M8 5v14l11-7z"/>
+                        </svg>
+                        <svg id="pause-icon" viewBox="0 0 24 24" width="22" height="22" fill="currentColor" style="display: none;">
+                            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                        </svg>
+                        <div id="player-spinner" class="btn-spinner" style="display: none;"></div>
+                    </button>
+                    <button id="btn-next" class="icon-btn" title="Наступний трек">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                            <polygon points="5 4 15 12 5 20 5 4"></polygon>
+                            <line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="3"></line>
+                        </svg>
+                    </button>
+                    <button id="btn-repeat" class="icon-btn" title="Повторення (Вимкнено)">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="17 1 21 5 17 9"></polyline>
+                            <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+                            <polyline points="7 23 3 19 7 15"></polyline>
+                            <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+                        </svg>
+                        <span id="repeat-badge" class="repeat-one-indicator" style="display: none;">1</span>
+                    </button>
+                </div>
+
+                <!-- SoundCloud-style waveform canvas with new neon sunset gradient -->
+                <div class="visualizer-container">
+                    <canvas id="visualizer-canvas"></canvas>
+                </div>
+
+                <!-- Timeline / Seekbar -->
+                <div class="player-timeline">
+                    <span id="time-current" class="time-label">0:00</span>
+                    <div class="seekbar-wrapper" id="seekbar-wrapper">
+                        <div class="seekbar-buffer" id="seekbar-buffer"></div>
+                        <div class="seekbar-progress" id="seekbar-progress"></div>
+                        <input type="range" id="seekbar" min="0" max="100" value="0" step="0.1">
+                    </div>
+                    <span id="time-total" class="time-label">0:00</span>
+                </div>
+            </div>
+
+            <!-- Right: Volume & Queue -->
+            <div class="player-right">
+                <button id="btn-toggle-queue" class="icon-btn" title="Черга відтворення">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="8" y1="6" x2="21" y2="6"></line>
+                        <line x1="8" y1="12" x2="21" y2="12"></line>
+                        <line x1="8" y1="18" x2="21" y2="18"></line>
+                        <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                        <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                        <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                    </svg>
+                </button>
+                <div class="volume-control">
+                    <button id="btn-mute" class="icon-btn" title="Звук">
+                        <svg id="vol-high-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                        </svg>
+                        <svg id="vol-mute-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                            <line x1="23" y1="9" x2="17" y2="15"></line>
+                            <line x1="17" y1="9" x2="23" y2="15"></line>
+                        </svg>
+                    </button>
+                    <div class="volume-slider-wrapper">
+                        <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="0.8">
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- MODAL: CREATE PLAYLIST -->
+    <div class="modal-overlay" id="modal-create-playlist" style="display: none;">
+        <div class="modal-card">
+            <h3>Новий плейлист</h3>
+            <p>Введіть назву для вашої персональної збірки:</p>
+            <input type="text" id="input-new-pl-name" placeholder="Наприклад: Нічний драйв, Фокус..." maxlength="40">
+            <div class="modal-actions">
+                <button class="btn-secondary" id="btn-cancel-create-pl">Скасувати</button>
+                <button class="btn-primary" id="btn-confirm-create-pl">Створити</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: ADD TO PLAYLIST PICKER -->
+    <div class="modal-overlay" id="modal-picker-playlist" style="display: none;">
+        <div class="modal-card">
+            <h3>Додати до плейлиста</h3>
+            <div class="playlist-picker-list" id="picker-playlist-list">
+                <!-- Dynamically listed playlists -->
+            </div>
+            <div class="modal-actions">
+                <button class="btn-secondary" id="btn-close-picker-pl">Закрити</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: EDIT PROFILE -->
+    <div class="modal-overlay" id="modal-edit-profile" style="display: none;">
+        <div class="modal-card">
+            <h3>Редагувати профіль</h3>
+            <p>Змініть нікнейм або аватар вашого облікового запису:</p>
+            <label style="font-size:0.78rem; color:var(--text-muted); margin-bottom:-6px;">Нікнейм:</label>
+            <input type="text" id="input-profile-name" placeholder="FEODAL" maxlength="25">
+            <label style="font-size:0.78rem; color:var(--text-muted); margin-bottom:-6px;">Посилання на аватар (URL):</label>
+            <input type="text" id="input-profile-avatar" placeholder="https://example.com/avatar.jpg">
+            <div class="modal-actions">
+                <button class="btn-secondary" id="btn-cancel-edit-profile">Скасувати</button>
+                <button class="btn-primary" id="btn-save-edit-profile">Зберегти</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: BANNER PRESETS -->
+    <div class="modal-overlay" id="modal-banner-presets" style="display: none;">
+        <div class="modal-card">
+            <h3>Тема обкладинки профілю</h3>
+            <p>Оберіть стиль або введіть власне зображення:</p>
+            <div class="banner-presets-list">
+                <button class="banner-preset-btn" data-preset="beige">
+                    <span class="preset-preview" style="background: #9b8e83;"></span>
+                    <span>Beige Aesthetic (SoundCloud)</span>
+                </button>
+                <button class="banner-preset-btn" data-preset="neon">
+                    <span class="preset-preview" style="background: linear-gradient(135deg, #2a0845, #6441a5, #fe8c00);"></span>
+                    <span>Sunset Neon</span>
+                </button>
+                <button class="banner-preset-btn" data-preset="cyber">
+                    <span class="preset-preview" style="background: linear-gradient(135deg, #09090e, #3a0058, #ff007f);"></span>
+                    <span>Cyberpunk Violet</span>
+                </button>
+                <button class="banner-preset-btn" data-preset="abyss">
+                    <span class="preset-preview" style="background: linear-gradient(135deg, #050508, #0d1b2a, #1b263b);"></span>
+                    <span>Midnight Abyss</span>
+                </button>
+            </div>
+            <label style="font-size:0.78rem; color:var(--text-muted); margin-top:8px; margin-bottom:-6px;">Або власний URL банера:</label>
+            <input type="text" id="input-custom-banner" placeholder="https://example.com/banner.jpg">
+            <div class="modal-actions">
+                <button class="btn-secondary" id="btn-close-banner-presets">Закрити</button>
+                <button class="btn-primary" id="btn-apply-custom-banner">Застосувати</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast" class="toast">Повідомлення</div>
+
+    <!-- SCRIPTS -->
+    <script src="js/visualizer.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/auth.js"></script>
+</body>
+</html>
